@@ -383,25 +383,61 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA7nWYBEg889EHYaQh0DeEo8rtzFjAn39I",
+  authDomain: "tatabbau-amn.firebaseapp.com",
+  databaseURL: "https://tatabbau-amn-default-rtdb.firebaseio.com",
+  projectId: "tatabbau-amn",
+  storageBucket: "tatabbau-amn.firebasestorage.app",
+  messagingSenderId: "709928047173",
+  appId: "1:709928047173:web:eefd5bab59e562d759092c",
+  measurementId: "G-CFVQ6SDCKY"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 // ══════════════════════════════════════
 //  STATE & STORAGE
 // ══════════════════════════════════════
 let currentRole = 'student';
 let currentUser = null;
-let currentView = 'main'; // main | attendance | students | bus-detail
+let currentView = 'main';
 
-// حساب المشرفة الثابت
 const SUPERVISOR = { user: 'نوال', pass: '6767', name: 'نوال', role: 'supervisor' };
 
-function loadData() {
-  return {
-    drivers:  JSON.parse(localStorage.getItem('drivers')  || '[]'),
-    students: JSON.parse(localStorage.getItem('students') || '[]'),
-  };
+async function loadData() {
+  const driversSnap  = await get(ref(db, 'drivers'));
+  const studentsSnap = await get(ref(db, 'students'));
+  const drivers  = driversSnap.exists()  ? Object.values(driversSnap.val())  : [];
+  const students = studentsSnap.exists() ? Object.values(studentsSnap.val()) : [];
+  return { drivers, students };
 }
-function saveDrivers(arr)  { localStorage.setItem('drivers',  JSON.stringify(arr)); }
-function saveStudents(arr) { localStorage.setItem('students', JSON.stringify(arr)); }
+
+async function saveDriver(driver) {
+  await set(ref(db, 'drivers/' + driver.user), driver);
+}
+
+async function saveStudent(student) {
+  await set(ref(db, 'students/' + student.user), student);
+}
+
+async function deleteDriverFromDB(user) {
+  await remove(ref(db, 'drivers/' + user));
+}
+
+async function getAttendance(busKey) {
+  const snap = await get(ref(db, 'attendance/' + busKey));
+  return snap.exists() ? snap.val() : {};
+}
+
+async function setAttendanceDB(busKey, studentUser, status) {
+  await set(ref(db, 'attendance/' + busKey + '/' + studentUser), status);
+}
 
 // ══════════════════════════════════════
 //  NAVIGATION
@@ -429,7 +465,7 @@ function goToLogin(role) {
 // ══════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════
-function doLogin() {
+async function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
   const btn  = document.getElementById('login-btn');
@@ -439,33 +475,44 @@ function doLogin() {
   btn.classList.add('loading');
   document.getElementById('login-btn-text').textContent = 'جاري التحقق...';
 
-  setTimeout(() => {
-    btn.classList.remove('loading');
-    document.getElementById('login-btn-text').textContent = 'دخول';
-
+  try {
     // تحقق المشرفة
     if (currentRole === 'supervisor') {
       if (user === SUPERVISOR.user && pass === SUPERVISOR.pass) {
+        btn.classList.remove('loading');
+        document.getElementById('login-btn-text').textContent = 'دخول';
         openDashboard(SUPERVISOR);
         return;
       }
     }
 
+    const { drivers, students } = await loadData();
+
     // تحقق السائقين
     if (currentRole === 'driver') {
-      const { drivers } = loadData();
       const found = drivers.find(d => d.user === user && d.pass === pass);
-      if (found) { openDashboard({ name: found.name, role: 'driver', bus: found.bus }); return; }
+      if (found) {
+        btn.classList.remove('loading');
+        document.getElementById('login-btn-text').textContent = 'دخول';
+        openDashboard({ name: found.name, role: 'driver', bus: found.bus });
+        return;
+      }
     }
 
     // تحقق الطالبات
     if (currentRole === 'student') {
-      const { students } = loadData();
       const found = students.find(s => s.user === user && s.pass === pass);
-      if (found) { openDashboard({ name: found.name, role: 'student', bus: found.bus, parent: found.parent }); return; }
+      if (found) {
+        btn.classList.remove('loading');
+        document.getElementById('login-btn-text').textContent = 'دخول';
+        openDashboard({ name: found.name, role: 'student', bus: found.bus, parent: found.parent });
+        return;
+      }
     }
 
     // فشل
+    btn.classList.remove('loading');
+    document.getElementById('login-btn-text').textContent = 'دخول';
     err.classList.add('show');
     document.getElementById('login-user').classList.add('error');
     document.getElementById('login-pass').classList.add('error');
@@ -473,7 +520,11 @@ function doLogin() {
       document.getElementById('login-user').classList.remove('error');
       document.getElementById('login-pass').classList.remove('error');
     }, 1800);
-  }, 900);
+  } catch(e) {
+    btn.classList.remove('loading');
+    document.getElementById('login-btn-text').textContent = 'دخول';
+    showToast('⚠️ خطأ في الاتصال، تحقق من الإنترنت');
+  }
 }
 
 function togglePass() {
@@ -506,8 +557,9 @@ function renderDashMain() {
 }
 
 // ─── مشرفة - الرئيسية ───
-function renderSupervisorMain(body) {
-  const { drivers, students } = loadData();
+async function renderSupervisorMain(body) {
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
+  const { drivers, students } = await loadData();
   const bus1 = students.filter(s => s.bus === '1');
   const bus2 = students.filter(s => s.bus === '2');
 
@@ -573,7 +625,7 @@ function renderSupervisorMain(body) {
 }
 
 // ─── تقرير الحضور (اختيار الباص) ───
-function renderAttendanceReport() {
+async function renderAttendanceReport() {
   currentView = 'attendance';
   const body = document.getElementById('dash-body');
   body.innerHTML = `
@@ -598,8 +650,7 @@ function renderAttendanceReport() {
       </div>
     </div>`;
 
-  // تحديث المعلومات
-  const { drivers, students } = loadData();
+  const { drivers, students } = await loadData();
   const bus1Students = students.filter(s => s.bus === '1');
   const bus2Students = students.filter(s => s.bus === '2');
   const bus1Driver = drivers.find(d => d.bus === '1');
@@ -612,13 +663,14 @@ function renderAttendanceReport() {
 }
 
 // ─── تفاصيل الباص ───
-function renderBusDetail(busNum) {
-  const { drivers, students } = loadData();
+async function renderBusDetail(busNum) {
+  const body = document.getElementById('dash-body');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
+
+  const { drivers, students } = await loadData();
+  const attendance = await getAttendance('bus' + busNum);
   const busStudents = students.filter(s => s.bus === busNum);
   const busDriver = drivers.find(d => d.bus === busNum);
-  const body = document.getElementById('dash-body');
-
-  const attendance = JSON.parse(localStorage.getItem('attendance_bus' + busNum) || '{}');
 
   let studentsHTML = busStudents.length === 0
     ? '<div style="text-align:center;color:var(--muted);padding:20px">لا توجد طالبات في هذا الباص</div>'
@@ -658,12 +710,8 @@ function renderBusDetail(busNum) {
     </div>`;
 }
 
-function setAttendance(busKey, studentUser, status, btn) {
-  const key = 'attendance_' + busKey;
-  const att = JSON.parse(localStorage.getItem(key) || '{}');
-  att[studentUser] = status;
-  localStorage.setItem(key, JSON.stringify(att));
-  // تحديث الأزرار
+async function setAttendance(busKey, studentUser, status, btn) {
+  await setAttendanceDB(busKey, studentUser, status);
   const row = btn.closest('.attendance-toggle');
   row.querySelectorAll('.att-btn').forEach(b => {
     if (b.classList.contains('present') || b.classList.contains('active-present')) {
@@ -677,13 +725,13 @@ function setAttendance(busKey, studentUser, status, btn) {
 }
 
 // ─── قائمة الطالبات (حضور/غياب) ───
-function renderStudentsList() {
-  const { students } = loadData();
+async function renderStudentsList() {
   const body = document.getElementById('dash-body');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
 
-  const att1 = JSON.parse(localStorage.getItem('attendance_bus1') || '{}');
-  const att2 = JSON.parse(localStorage.getItem('attendance_bus2') || '{}');
-
+  const { students } = await loadData();
+  const att1 = await getAttendance('bus1');
+  const att2 = await getAttendance('bus2');
   const allAtt = { ...att1, ...att2 };
 
   const present = students.filter(s => allAtt[s.user] === 'present');
@@ -725,9 +773,10 @@ function renderStudentsList() {
 }
 
 // ─── قائمة السائقين ───
-function renderDriversList() {
-  const { drivers } = loadData();
+async function renderDriversList() {
   const body = document.getElementById('dash-body');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
+  const { drivers } = await loadData();
 
   body.innerHTML = `
     <button class="dash-back-btn" onclick="renderSupervisorMain(document.getElementById('dash-body'))">→ رجوع</button>
@@ -736,13 +785,13 @@ function renderDriversList() {
       <div class="dash-card">
         ${drivers.length === 0
           ? '<div style="text-align:center;color:var(--muted);padding:20px">لا يوجد سائقون مسجلون</div>'
-          : drivers.map((d, i) => `
+          : drivers.map((d) => `
             <div class="student-item">
               <div class="student-info">
                 <div class="student-name">${d.name}</div>
                 <div class="student-meta">📱 ${d.phone} — باص رقم: ${d.bus} — المستخدم: ${d.user}</div>
               </div>
-              <button onclick="deleteDriver(${i})" style="background:var(--red-lite);color:var(--red);border:none;border-radius:8px;padding:5px 10px;font-family:'Tajawal',sans-serif;cursor:pointer;font-size:12px;font-weight:700">حذف</button>
+              <button onclick="deleteDriver('${d.user}')" style="background:var(--red-lite);color:var(--red);border:none;border-radius:8px;padding:5px 10px;font-family:'Tajawal',sans-serif;cursor:pointer;font-size:12px;font-weight:700">حذف</button>
             </div>`).join('')
         }
       </div>
@@ -751,8 +800,8 @@ function renderDriversList() {
 }
 
 // ─── داشبورد السائق ───
-function renderDriverMain(body) {
-  const { students } = loadData();
+async function renderDriverMain(body) {
+  const { students } = await loadData();
   const busStudents = students.filter(s => s.bus === currentUser.bus);
 
   body.innerHTML = `
@@ -827,7 +876,7 @@ function renderStudentMain(body) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function saveDriver() {
+async function saveDriver() {
   const name  = document.getElementById('drv-name').value.trim();
   const phone = document.getElementById('drv-phone').value.trim();
   const user  = document.getElementById('drv-user').value.trim();
@@ -836,18 +885,17 @@ function saveDriver() {
 
   if (!name || !user || !pass || !bus) { showToast('⚠️ يرجى ملء جميع الحقول'); return; }
 
-  const { drivers } = loadData();
+  const { drivers } = await loadData();
   if (drivers.find(d => d.user === user)) { showToast('⚠️ اسم المستخدم موجود مسبقاً'); return; }
 
-  drivers.push({ name, phone, user, pass, bus });
-  saveDrivers(drivers);
+  await saveDriver({ name, phone, user, pass, bus });
   closeModal('modal-add-driver');
   clearFields(['drv-name','drv-phone','drv-user','drv-pass','drv-bus']);
   showToast('✅ تم إضافة السائق بنجاح');
   renderSupervisorMain(document.getElementById('dash-body'));
 }
 
-function saveStudent() {
+async function saveStudent() {
   const name   = document.getElementById('std-name').value.trim();
   const parent = document.getElementById('std-parent').value.trim();
   const user   = document.getElementById('std-user').value.trim();
@@ -856,21 +904,18 @@ function saveStudent() {
 
   if (!name || !user || !pass) { showToast('⚠️ يرجى ملء جميع الحقول'); return; }
 
-  const { students } = loadData();
+  const { students } = await loadData();
   if (students.find(s => s.user === user)) { showToast('⚠️ اسم المستخدم موجود مسبقاً'); return; }
 
-  students.push({ name, parent, user, pass, bus });
-  saveStudents(students);
+  await saveStudent({ name, parent, user, pass, bus });
   closeModal('modal-add-student');
   clearFields(['std-name','std-parent','std-user','std-pass']);
   showToast('✅ تم إضافة الطالبة بنجاح');
   renderSupervisorMain(document.getElementById('dash-body'));
 }
 
-function deleteDriver(index) {
-  const { drivers } = loadData();
-  drivers.splice(index, 1);
-  saveDrivers(drivers);
+async function deleteDriver(user) {
+  await deleteDriverFromDB(user);
   showToast('🗑️ تم حذف السائق');
   renderDriversList();
 }
@@ -901,6 +946,27 @@ function showToast(msg) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ══════════════════════════════════════
+//  EXPOSE FUNCTIONS TO WINDOW (ES Module)
+// ══════════════════════════════════════
+window.goTo = goTo;
+window.goToLogin = goToLogin;
+window.doLogin = doLogin;
+window.togglePass = togglePass;
+window.doLogout = doLogout;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.saveDriver = saveDriver;
+window.saveStudent = saveStudent;
+window.deleteDriver = deleteDriver;
+window.renderSupervisorMain = renderSupervisorMain;
+window.renderAttendanceReport = renderAttendanceReport;
+window.renderBusDetail = renderBusDetail;
+window.renderStudentsList = renderStudentsList;
+window.renderDriversList = renderDriversList;
+window.setAttendance = setAttendance;
+window.showToast = showToast;
 
 // إغلاق المودال عند الضغط خارجه
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
