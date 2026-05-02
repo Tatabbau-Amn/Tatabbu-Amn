@@ -199,7 +199,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
     </div>
     <div class="role-prompt">اختر نوع حسابك</div>
     <div class="role-grid">
-      <button class="role-btn student" onclick="goToLogin('student')">
+      <button class="role-btn student" id="btn-student">
         <div class="role-btn-icon">🎒</div>
         <div class="role-btn-text">
           <div class="role-btn-name">طالبة</div>
@@ -207,7 +207,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
         </div>
         <div class="role-btn-arrow">←</div>
       </button>
-      <button class="role-btn driver" onclick="goToLogin('driver')">
+      <button class="role-btn driver" id="btn-driver">
         <div class="role-btn-icon">🚍</div>
         <div class="role-btn-text">
           <div class="role-btn-name">سائق الحافلة</div>
@@ -215,7 +215,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
         </div>
         <div class="role-btn-arrow">←</div>
       </button>
-      <button class="role-btn supervisor" onclick="goToLogin('supervisor')">
+      <button class="role-btn supervisor" id="btn-supervisor">
         <div class="role-btn-icon">📋</div>
         <div class="role-btn-text">
           <div class="role-btn-name">مشرفة</div>
@@ -231,7 +231,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="page-login" class="page">
   <div class="login-header">
-    <button class="back-btn" onclick="goTo('landing')">→</button>
+    <button class="back-btn" id="back-to-landing">→</button>
     <div class="login-header-brand">
       <div class="login-header-logo">🛡️</div>
       <div class="login-header-name">تتبع <span>آمن</span></div>
@@ -258,7 +258,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
         <div class="field-wrap">
           <span class="field-icon">🔒</span>
           <input type="password" id="login-pass" placeholder="أدخل كلمة المرور" autocomplete="current-password">
-          <button class="field-eye" onclick="togglePass()" id="eye-btn" type="button">👁️</button>
+          <button class="field-eye" id="eye-btn" type="button">👁️</button>
         </div>
       </div>
       <div class="form-meta">
@@ -266,7 +266,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
           <input type="checkbox" id="remember-me"> تذكّرني
         </label>
       </div>
-      <button class="submit-btn" id="login-btn" onclick="doLogin()">
+      <button class="submit-btn" id="login-btn">
         <span id="login-btn-text">دخول</span>
       </button>
     </div>
@@ -278,7 +278,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
   <div class="dash-topbar">
     <div class="dash-top-row">
       <div class="dash-brand">🛡️ تتبع آمن</div>
-      <button class="dash-logout" onclick="doLogout()">خروج ↩</button>
+      <button class="dash-logout" id="logout-btn">خروج ↩</button>
     </div>
     <div class="dash-welcome">أهلاً وسهلاً،</div>
     <div class="dash-user-name" id="dash-name">—</div>
@@ -290,7 +290,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
 <!-- ══════════════ MODAL: إنشاء حساب سائق ══════════════ -->
 <div class="modal-overlay" id="modal-add-driver">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('modal-add-driver')">×</button>
+    <button class="modal-close" id="close-modal-driver">×</button>
     <div class="modal-title">➕ إضافة سائق</div>
     <div class="modal-sub">أدخل بيانات السائق الجديد</div>
     <div class="field">
@@ -328,14 +328,14 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
         <input type="text" id="drv-bus" placeholder="مثال: 1 أو 2">
       </div>
     </div>
-    <button class="submit-btn supervisor" onclick="saveDriver()">حفظ السائق</button>
+    <button class="submit-btn supervisor" id="save-driver-btn">حفظ السائق</button>
   </div>
 </div>
 
 <!-- ══════════════ MODAL: إنشاء حساب طالبة ══════════════ -->
 <div class="modal-overlay" id="modal-add-student">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('modal-add-student')">×</button>
+    <button class="modal-close" id="close-modal-student">×</button>
     <div class="modal-title">➕ إضافة طالبة</div>
     <div class="modal-sub">أدخل بيانات الطالبة الجديدة</div>
     <div class="field">
@@ -376,7 +376,7 @@ html, body { min-height: 100vh; font-family: 'Tajawal', sans-serif; background: 
         </select>
       </div>
     </div>
-    <button class="submit-btn supervisor" onclick="saveStudent()">حفظ الطالبة</button>
+    <button class="submit-btn supervisor" id="save-student-btn">حفظ الطالبة</button>
   </div>
 </div>
 
@@ -401,15 +401,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ══════════════════════════════════════
-//  STATE & STORAGE
-// ══════════════════════════════════════
 let currentRole = 'student';
 let currentUser = null;
-let currentView = 'main';
 
 const SUPERVISOR = { user: 'نوال', pass: '6767', name: 'نوال', role: 'supervisor' };
 
+// ══════════════════════════════════════
+//  FIREBASE HELPERS
+// ══════════════════════════════════════
 async function loadData() {
   const driversSnap  = await get(ref(db, 'drivers'));
   const studentsSnap = await get(ref(db, 'students'));
@@ -418,11 +417,11 @@ async function loadData() {
   return { drivers, students };
 }
 
-async function saveDriver(driver) {
+async function saveDriverToDB(driver) {
   await set(ref(db, 'drivers/' + driver.user), driver);
 }
 
-async function saveStudent(student) {
+async function saveStudentToDB(student) {
   await set(ref(db, 'students/' + student.user), student);
 }
 
@@ -450,7 +449,11 @@ function goTo(page) {
 
 function goToLogin(role) {
   currentRole = role;
-  const pills = { student: ['🎒', 'طالبة', 'student'], driver: ['🚍', 'سائق', 'driver'], supervisor: ['📋', 'مشرفة', 'supervisor'] };
+  const pills = {
+    student:    ['🎒', 'طالبة',   'student'],
+    driver:     ['🚍', 'سائق',    'driver'],
+    supervisor: ['📋', 'مشرفة',   'supervisor']
+  };
   const p = pills[role];
   const pill = document.getElementById('login-role-pill');
   pill.className = 'role-pill ' + p[2];
@@ -460,6 +463,17 @@ function goToLogin(role) {
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').classList.remove('show');
   goTo('login');
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ══════════════════════════════════════
@@ -476,7 +490,6 @@ async function doLogin() {
   document.getElementById('login-btn-text').textContent = 'جاري التحقق...';
 
   try {
-    // تحقق المشرفة
     if (currentRole === 'supervisor') {
       if (user === SUPERVISOR.user && pass === SUPERVISOR.pass) {
         btn.classList.remove('loading');
@@ -488,7 +501,6 @@ async function doLogin() {
 
     const { drivers, students } = await loadData();
 
-    // تحقق السائقين
     if (currentRole === 'driver') {
       const found = drivers.find(d => d.user === user && d.pass === pass);
       if (found) {
@@ -499,7 +511,6 @@ async function doLogin() {
       }
     }
 
-    // تحقق الطالبات
     if (currentRole === 'student') {
       const found = students.find(s => s.user === user && s.pass === pass);
       if (found) {
@@ -510,7 +521,6 @@ async function doLogin() {
       }
     }
 
-    // فشل
     btn.classList.remove('loading');
     document.getElementById('login-btn-text').textContent = 'دخول';
     err.classList.add('show');
@@ -547,21 +557,17 @@ function openDashboard(user) {
 }
 
 function renderDashMain() {
-  currentView = 'main';
   const body = document.getElementById('dash-body');
   const role = currentUser.role;
-
-  if (role === 'supervisor') { renderSupervisorMain(body); }
-  else if (role === 'driver')  { renderDriverMain(body); }
-  else { renderStudentMain(body); }
+  if (role === 'supervisor') renderSupervisorMain(body);
+  else if (role === 'driver') renderDriverMain(body);
+  else renderStudentMain(body);
 }
 
 // ─── مشرفة - الرئيسية ───
 async function renderSupervisorMain(body) {
   body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
   const { drivers, students } = await loadData();
-  const bus1 = students.filter(s => s.bus === '1');
-  const bus2 = students.filter(s => s.bus === '2');
 
   body.innerHTML = `
     <div class="dash-section">
@@ -575,7 +581,7 @@ async function renderSupervisorMain(body) {
 
     <div class="dash-section">
       <div class="dash-section-title">تقرير الحضور</div>
-      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" onclick="renderAttendanceReport()">
+      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" id="go-attendance-report">
         <div style="width:50px;height:50px;background:var(--green-lite);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">📊</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:16px">تقرير الحضور</div>
@@ -587,7 +593,7 @@ async function renderSupervisorMain(body) {
 
     <div class="dash-section">
       <div class="dash-section-title">الطالبات</div>
-      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" onclick="renderStudentsList()">
+      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" id="go-students-list">
         <div style="width:50px;height:50px;background:var(--gold-lite);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">👩‍🎓</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:16px">قائمة الطالبات</div>
@@ -600,39 +606,45 @@ async function renderSupervisorMain(body) {
     <div class="dash-section">
       <div class="dash-section-title">إدارة الحسابات</div>
       <div class="quick-grid">
-        <div class="quick-btn" onclick="openModal('modal-add-driver')">
+        <div class="quick-btn" id="open-add-driver">
           <div class="quick-icon">🚍</div>
           <div class="quick-label">إضافة سائق</div>
           <div class="quick-sub">حساب جديد</div>
         </div>
-        <div class="quick-btn" onclick="openModal('modal-add-student')">
+        <div class="quick-btn" id="open-add-student">
           <div class="quick-icon">🎒</div>
           <div class="quick-label">إضافة طالبة</div>
           <div class="quick-sub">حساب جديد</div>
         </div>
-        <div class="quick-btn" onclick="renderDriversList()">
+        <div class="quick-btn" id="go-drivers-list">
           <div class="quick-icon">📋</div>
           <div class="quick-label">السائقين</div>
           <div class="quick-sub">${drivers.length} سائق</div>
         </div>
-        <div class="quick-btn" onclick="renderStudentsList()">
+        <div class="quick-btn" id="go-students-list2">
           <div class="quick-icon">👩‍🎓</div>
           <div class="quick-label">الطالبات</div>
           <div class="quick-sub">${students.length} طالبة</div>
         </div>
       </div>
     </div>`;
+
+  document.getElementById('go-attendance-report').addEventListener('click', renderAttendanceReport);
+  document.getElementById('go-students-list').addEventListener('click', renderStudentsList);
+  document.getElementById('go-students-list2').addEventListener('click', renderStudentsList);
+  document.getElementById('go-drivers-list').addEventListener('click', renderDriversList);
+  document.getElementById('open-add-driver').addEventListener('click', () => openModal('modal-add-driver'));
+  document.getElementById('open-add-student').addEventListener('click', () => openModal('modal-add-student'));
 }
 
-// ─── تقرير الحضور (اختيار الباص) ───
+// ─── تقرير الحضور ───
 async function renderAttendanceReport() {
-  currentView = 'attendance';
   const body = document.getElementById('dash-body');
   body.innerHTML = `
-    <button class="dash-back-btn" onclick="renderSupervisorMain(document.getElementById('dash-body'))">→ رجوع</button>
+    <button class="dash-back-btn" id="back-to-sup">→ رجوع</button>
     <div class="dash-section">
       <div class="dash-section-title">تقرير الحضور</div>
-      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:12px" onclick="renderBusDetail('1')">
+      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px;margin-bottom:12px" id="go-bus1">
         <div style="width:50px;height:50px;background:var(--green-lite);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">🚌</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:16px">الباص الأول</div>
@@ -640,7 +652,7 @@ async function renderAttendanceReport() {
         </div>
         <span style="color:var(--muted);font-size:20px">←</span>
       </div>
-      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" onclick="renderBusDetail('2')">
+      <div class="dash-card" style="cursor:pointer;display:flex;align-items:center;gap:14px" id="go-bus2">
         <div style="width:50px;height:50px;background:var(--gold-lite);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px">🚌</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:16px">الباص الثاني</div>
@@ -650,16 +662,20 @@ async function renderAttendanceReport() {
       </div>
     </div>`;
 
+  document.getElementById('back-to-sup').addEventListener('click', () => renderSupervisorMain(document.getElementById('dash-body')));
+  document.getElementById('go-bus1').addEventListener('click', () => renderBusDetail('1'));
+  document.getElementById('go-bus2').addEventListener('click', () => renderBusDetail('2'));
+
   const { drivers, students } = await loadData();
   const bus1Students = students.filter(s => s.bus === '1');
   const bus2Students = students.filter(s => s.bus === '2');
   const bus1Driver = drivers.find(d => d.bus === '1');
   const bus2Driver = drivers.find(d => d.bus === '2');
 
-  const b1Info = document.getElementById('bus1-info');
-  const b2Info = document.getElementById('bus2-info');
-  if (b1Info) b1Info.textContent = (bus1Driver ? 'السائق: ' + bus1Driver.name + ' — ' : '') + bus1Students.length + ' طالبة';
-  if (b2Info) b2Info.textContent = (bus2Driver ? 'السائق: ' + bus2Driver.name + ' — ' : '') + bus2Students.length + ' طالبة';
+  const b1 = document.getElementById('bus1-info');
+  const b2 = document.getElementById('bus2-info');
+  if (b1) b1.textContent = (bus1Driver ? 'السائق: ' + bus1Driver.name + ' — ' : '') + bus1Students.length + ' طالبة';
+  if (b2) b2.textContent = (bus2Driver ? 'السائق: ' + bus2Driver.name + ' — ' : '') + bus2Students.length + ' طالبة';
 }
 
 // ─── تفاصيل الباص ───
@@ -684,15 +700,15 @@ async function renderBusDetail(busNum) {
           </div>
           <div class="attendance-toggle">
             <button class="att-btn ${att === 'present' ? 'active-present' : 'present'}"
-              onclick="setAttendance('bus${busNum}','${s.user}','present',this)">✅ حاضرة</button>
+              data-bus="bus${busNum}" data-user="${s.user}" data-status="present">✅ حاضرة</button>
             <button class="att-btn ${att === 'absent' ? 'active-absent' : 'absent'}"
-              onclick="setAttendance('bus${busNum}','${s.user}','absent',this)">🚫 غائبة</button>
+              data-bus="bus${busNum}" data-user="${s.user}" data-status="absent">🚫 غائبة</button>
           </div>
         </div>`;
       }).join('');
 
   body.innerHTML = `
-    <button class="dash-back-btn" onclick="renderAttendanceReport()">→ رجوع</button>
+    <button class="dash-back-btn" id="back-to-att">→ رجوع</button>
     <div class="dash-section">
       <div class="dash-section-title">الباص ${busNum === '1' ? 'الأول' : 'الثاني'}</div>
       ${busDriver ? `
@@ -708,23 +724,26 @@ async function renderBusDetail(busNum) {
         ${studentsHTML}
       </div>
     </div>`;
-}
 
-async function setAttendance(busKey, studentUser, status, btn) {
-  await setAttendanceDB(busKey, studentUser, status);
-  const row = btn.closest('.attendance-toggle');
-  row.querySelectorAll('.att-btn').forEach(b => {
-    if (b.classList.contains('present') || b.classList.contains('active-present')) {
-      b.className = 'att-btn present';
-    } else {
-      b.className = 'att-btn absent';
-    }
+  document.getElementById('back-to-att').addEventListener('click', renderAttendanceReport);
+
+  body.querySelectorAll('.att-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const busKey = this.dataset.bus;
+      const studentUser = this.dataset.user;
+      const status = this.dataset.status;
+      await setAttendanceDB(busKey, studentUser, status);
+      const row = this.closest('.attendance-toggle');
+      row.querySelectorAll('.att-btn').forEach(b => {
+        b.className = 'att-btn ' + (b.dataset.status === 'present' ? 'present' : 'absent');
+      });
+      this.className = 'att-btn ' + (status === 'present' ? 'active-present' : 'active-absent');
+      showToast(status === 'present' ? '✅ تم تسجيل الحضور' : '🚫 تم تسجيل الغياب');
+    });
   });
-  btn.className = 'att-btn ' + (status === 'present' ? 'active-present' : 'active-absent');
-  showToast(status === 'present' ? '✅ تم تسجيل الحضور' : '🚫 تم تسجيل الغياب');
 }
 
-// ─── قائمة الطالبات (حضور/غياب) ───
+// ─── قائمة الطالبات ───
 async function renderStudentsList() {
   const body = document.getElementById('dash-body');
   body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">⏳ جاري التحميل...</div>';
@@ -753,7 +772,7 @@ async function renderStudentsList() {
       </div>`).join('')}`;
 
   body.innerHTML = `
-    <button class="dash-back-btn" onclick="renderSupervisorMain(document.getElementById('dash-body'))">→ رجوع</button>
+    <button class="dash-back-btn" id="back-to-sup2">→ رجوع</button>
     <div class="dash-section">
       <div class="dash-section-title">قائمة الطالبات</div>
       <div class="stat-row" style="margin-bottom:16px">
@@ -770,6 +789,8 @@ async function renderStudentsList() {
         }
       </div>
     </div>`;
+
+  document.getElementById('back-to-sup2').addEventListener('click', () => renderSupervisorMain(document.getElementById('dash-body')));
 }
 
 // ─── قائمة السائقين ───
@@ -779,24 +800,34 @@ async function renderDriversList() {
   const { drivers } = await loadData();
 
   body.innerHTML = `
-    <button class="dash-back-btn" onclick="renderSupervisorMain(document.getElementById('dash-body'))">→ رجوع</button>
+    <button class="dash-back-btn" id="back-to-sup3">→ رجوع</button>
     <div class="dash-section">
       <div class="dash-section-title">السائقين المسجلين (${drivers.length})</div>
       <div class="dash-card">
         ${drivers.length === 0
           ? '<div style="text-align:center;color:var(--muted);padding:20px">لا يوجد سائقون مسجلون</div>'
-          : drivers.map((d) => `
+          : drivers.map(d => `
             <div class="student-item">
               <div class="student-info">
                 <div class="student-name">${d.name}</div>
                 <div class="student-meta">📱 ${d.phone} — باص رقم: ${d.bus} — المستخدم: ${d.user}</div>
               </div>
-              <button onclick="deleteDriver('${d.user}')" style="background:var(--red-lite);color:var(--red);border:none;border-radius:8px;padding:5px 10px;font-family:'Tajawal',sans-serif;cursor:pointer;font-size:12px;font-weight:700">حذف</button>
+              <button class="del-driver-btn" data-user="${d.user}" style="background:var(--red-lite);color:var(--red);border:none;border-radius:8px;padding:5px 10px;font-family:'Tajawal',sans-serif;cursor:pointer;font-size:12px;font-weight:700">حذف</button>
             </div>`).join('')
         }
       </div>
-      <button class="submit-btn supervisor" onclick="openModal('modal-add-driver')" style="margin-top:8px">➕ إضافة سائق</button>
+      <button class="submit-btn supervisor" id="add-driver-from-list" style="margin-top:8px">➕ إضافة سائق</button>
     </div>`;
+
+  document.getElementById('back-to-sup3').addEventListener('click', () => renderSupervisorMain(document.getElementById('dash-body')));
+  document.getElementById('add-driver-from-list').addEventListener('click', () => openModal('modal-add-driver'));
+  body.querySelectorAll('.del-driver-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      await deleteDriverFromDB(this.dataset.user);
+      showToast('🗑️ تم حذف السائق');
+      renderDriversList();
+    });
+  });
 }
 
 // ─── داشبورد السائق ───
@@ -846,28 +877,33 @@ function renderStudentMain(body) {
     <div class="dash-section">
       <div class="dash-section-title">إجراءات سريعة</div>
       <div class="quick-grid">
-        <div class="quick-btn" onclick="showToast('✅ تم تسجيل حضورك!')">
+        <div class="quick-btn" id="std-present">
           <div class="quick-icon">✅</div>
           <div class="quick-label">حاضرة</div>
           <div class="quick-sub">سجّلي حضورك</div>
         </div>
-        <div class="quick-btn" onclick="showToast('🚫 تم إبلاغ السائق')">
+        <div class="quick-btn" id="std-absent">
           <div class="quick-icon">🚫</div>
           <div class="quick-label">غائبة</div>
           <div class="quick-sub">أبلغي بالغياب</div>
         </div>
-        <div class="quick-btn" onclick="showToast('📍 جاري تحميل الخريطة...')">
+        <div class="quick-btn" id="std-location">
           <div class="quick-icon">📍</div>
           <div class="quick-label">موقع الحافلة</div>
           <div class="quick-sub">تتبع مباشر</div>
         </div>
-        <div class="quick-btn" onclick="showToast('🔔 الإشعارات مفعّلة')">
+        <div class="quick-btn" id="std-notify">
           <div class="quick-icon">🔔</div>
           <div class="quick-label">الإشعارات</div>
           <div class="quick-sub">إعدادات التنبيه</div>
         </div>
       </div>
     </div>`;
+
+  document.getElementById('std-present').addEventListener('click', () => showToast('✅ تم تسجيل حضورك!'));
+  document.getElementById('std-absent').addEventListener('click', () => showToast('🚫 تم إبلاغ السائق'));
+  document.getElementById('std-location').addEventListener('click', () => showToast('📍 جاري تحميل الخريطة...'));
+  document.getElementById('std-notify').addEventListener('click', () => showToast('🔔 الإشعارات مفعّلة'));
 }
 
 // ══════════════════════════════════════
@@ -876,7 +912,7 @@ function renderStudentMain(body) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-async function saveDriver() {
+async function handleSaveDriver() {
   const name  = document.getElementById('drv-name').value.trim();
   const phone = document.getElementById('drv-phone').value.trim();
   const user  = document.getElementById('drv-user').value.trim();
@@ -888,14 +924,14 @@ async function saveDriver() {
   const { drivers } = await loadData();
   if (drivers.find(d => d.user === user)) { showToast('⚠️ اسم المستخدم موجود مسبقاً'); return; }
 
-  await saveDriver({ name, phone, user, pass, bus });
+  await saveDriverToDB({ name, phone, user, pass, bus });
   closeModal('modal-add-driver');
-  clearFields(['drv-name','drv-phone','drv-user','drv-pass','drv-bus']);
+  ['drv-name','drv-phone','drv-user','drv-pass','drv-bus'].forEach(id => { document.getElementById(id).value = ''; });
   showToast('✅ تم إضافة السائق بنجاح');
   renderSupervisorMain(document.getElementById('dash-body'));
 }
 
-async function saveStudent() {
+async function handleSaveStudent() {
   const name   = document.getElementById('std-name').value.trim();
   const parent = document.getElementById('std-parent').value.trim();
   const user   = document.getElementById('std-user').value.trim();
@@ -907,75 +943,36 @@ async function saveStudent() {
   const { students } = await loadData();
   if (students.find(s => s.user === user)) { showToast('⚠️ اسم المستخدم موجود مسبقاً'); return; }
 
-  await saveStudent({ name, parent, user, pass, bus });
+  await saveStudentToDB({ name, parent, user, pass, bus });
   closeModal('modal-add-student');
-  clearFields(['std-name','std-parent','std-user','std-pass']);
+  ['std-name','std-parent','std-user','std-pass'].forEach(id => { document.getElementById(id).value = ''; });
   showToast('✅ تم إضافة الطالبة بنجاح');
   renderSupervisorMain(document.getElementById('dash-body'));
 }
 
-async function deleteDriver(user) {
-  await deleteDriverFromDB(user);
-  showToast('🗑️ تم حذف السائق');
-  renderDriversList();
-}
+// ══════════════════════════════════════
+//  EVENT LISTENERS (بعيداً عن onclick)
+// ══════════════════════════════════════
+document.getElementById('btn-student').addEventListener('click', () => goToLogin('student'));
+document.getElementById('btn-driver').addEventListener('click', () => goToLogin('driver'));
+document.getElementById('btn-supervisor').addEventListener('click', () => goToLogin('supervisor'));
 
-function clearFields(ids) {
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-}
+document.getElementById('back-to-landing').addEventListener('click', () => goTo('landing'));
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('eye-btn').addEventListener('click', togglePass);
+document.getElementById('logout-btn').addEventListener('click', () => { currentUser = null; goTo('landing'); showToast('👋 تم تسجيل الخروج'); });
 
-// ══════════════════════════════════════
-//  LOGOUT
-// ══════════════════════════════════════
-function doLogout() {
-  currentUser = null;
-  goTo('landing');
-  showToast('👋 تم تسجيل الخروج');
-}
+document.getElementById('close-modal-driver').addEventListener('click', () => closeModal('modal-add-driver'));
+document.getElementById('close-modal-student').addEventListener('click', () => closeModal('modal-add-student'));
+document.getElementById('save-driver-btn').addEventListener('click', handleSaveDriver);
+document.getElementById('save-student-btn').addEventListener('click', handleSaveStudent);
 
-// ══════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// ══════════════════════════════════════
-//  EXPOSE FUNCTIONS TO WINDOW (ES Module)
-// ══════════════════════════════════════
-window.goTo = goTo;
-window.goToLogin = goToLogin;
-window.doLogin = doLogin;
-window.togglePass = togglePass;
-window.doLogout = doLogout;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.saveDriver = saveDriver;
-window.saveStudent = saveStudent;
-window.deleteDriver = deleteDriver;
-window.renderSupervisorMain = renderSupervisorMain;
-window.renderAttendanceReport = renderAttendanceReport;
-window.renderBusDetail = renderBusDetail;
-window.renderStudentsList = renderStudentsList;
-window.renderDriversList = renderDriversList;
-window.setAttendance = setAttendance;
-window.showToast = showToast;
-
-// إغلاق المودال عند الضغط خارجه
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
   });
 });
 
-// Enter للدخول
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('page-login').classList.contains('active')) {
     doLogin();
