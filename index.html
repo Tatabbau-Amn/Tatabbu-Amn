@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ww<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -217,7 +217,7 @@ html,body{min-height:100vh;font-family:'Tajawal',sans-serif;background:var(--bg)
         <div class="role-btn-arrow">←</div>
       </button>
     </div>
-    <div class="landing-footer">© 2025 تتبع آمن — جميع الحقوق محفوظة</div>
+    <div class="landing-footer">© 2026 تتبع آمن — جميع الحقوق محفوظة</div>
   </div>
 </div>
 
@@ -336,8 +336,18 @@ async function saveDriverToDB(d)       { await set(ref(db,'drivers/'+d.user), d)
 async function saveStudentToDB(s)      { await set(ref(db,'students/'+s.user), s); }
 async function deleteDriverFromDB(u)   { await remove(ref(db,'drivers/'+u)); }
 async function deleteStudentFromDB(u)  { await remove(ref(db,'students/'+u)); }
-async function getAttendance(bk)       { const s=await get(ref(db,'attendance/'+bk)); return s.exists()?s.val():{}; }
-async function setAttendanceDB(bk,su,st){ await set(ref(db,'attendance/'+bk+'/'+su), st); }
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+async function getAttendance(bk)       { const k=todayKey(); const s=await get(ref(db,'attendance/'+bk+'/'+k)); return s.exists()?s.val():{}; }
+async function setAttendanceDB(bk,su,st){ await set(ref(db,'attendance/'+bk+'/'+todayKey()+'/'+su), st); }
+async function getAttendanceRange(bk,days){
+  const snap=await get(ref(db,'attendance/'+bk)); if(!snap.exists()) return {};
+  const all=snap.val(); const result={};
+  const now=new Date();
+  for(let i=0;i<days;i++){ const d=new Date(now); d.setDate(d.getDate()-i);
+    const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(all[k]) Object.entries(all[k]).forEach(([u,v])=>{ if(!result[u]) result[u]={present:0,absent:0}; if(v==='present') result[u].present++; else result[u].absent++; });
+  } return result;
+}
 async function saveBusLocation(bus,lat,lng){ await set(ref(db,'locations/bus'+bus),{lat,lng,time:Date.now()}); }
 async function saveStudentLocation(u,lat,lng){ await set(ref(db,'studentLoc/'+u),{lat,lng,time:Date.now()}); }
 async function getBusLocation(bus)     { const s=await get(ref(db,'locations/bus'+bus)); return s.exists()?s.val():null; }
@@ -441,6 +451,7 @@ async function renderSupervisorMain(body) {
       <div class="dash-section-title">إدارة</div>
       <div class="quick-grid">
         <div class="quick-btn" id="go-att"><div class="quick-icon">📊</div><div class="quick-label">تقرير الحضور</div></div>
+        <div class="quick-btn" id="go-stats"><div class="quick-icon">📈</div><div class="quick-label">إحصائيات الحضور</div></div>
         <div class="quick-btn" id="go-std"><div class="quick-icon">👩‍🎓</div><div class="quick-label">الطالبات</div><div class="quick-sub">${students.length} طالبة</div></div>
         <div class="quick-btn" id="go-drv"><div class="quick-icon">🚍</div><div class="quick-label">السائقين</div><div class="quick-sub">${drivers.length} سائق</div></div>
         <div class="quick-btn" id="go-busloc"><div class="quick-icon">📍</div><div class="quick-label">مواقع الحافلات</div></div>
@@ -459,8 +470,105 @@ async function renderSupervisorMain(body) {
   document.getElementById('go-drv').addEventListener('click', renderDriversList);
   document.getElementById('go-busloc').addEventListener('click', renderBusLocations);
   document.getElementById('go-stdloc').addEventListener('click', renderStudentLocations);
+  document.getElementById('go-stats').addEventListener('click', renderAttendanceStats);
   document.getElementById('open-add-d').addEventListener('click', ()=>openModal('modal-add-driver'));
   document.getElementById('open-add-s').addEventListener('click', ()=>openModal('modal-add-student'));
+}
+
+async function renderAttendanceStats() {
+  const body=document.getElementById('dash-body');
+  body.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">\u23f3 \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644...</div>';
+  const {students}=await loadData();
+
+  // load today, week(7 days), month(30 days) for all buses
+  const buses=['bus1','bus2','bus3'];
+  const [todayData, weekData, monthData] = await Promise.all([
+    Promise.all(buses.map(b=>getAttendance(b))).then(rs=>Object.assign({},...rs)),
+    Promise.all(buses.map(b=>getAttendanceRange(b,7))).then(rs=>{
+      const m={}; rs.forEach(r=>Object.entries(r).forEach(([u,v])=>{ if(!m[u]) m[u]={present:0,absent:0}; m[u].present+=v.present; m[u].absent+=v.absent; })); return m;
+    }),
+    Promise.all(buses.map(b=>getAttendanceRange(b,30))).then(rs=>{
+      const m={}; rs.forEach(r=>Object.entries(r).forEach(([u,v])=>{ if(!m[u]) m[u]={present:0,absent:0}; m[u].present+=v.present; m[u].absent+=v.absent; })); return m;
+    })
+  ]);
+
+  const tPresent=students.filter(s=>todayData[s.user]==='present').length;
+  const tAbsent=students.filter(s=>todayData[s.user]==='absent').length;
+  const tUnknown=students.length-tPresent-tAbsent;
+
+  const wPresent=students.reduce((a,s)=>a+(weekData[s.user]?.present||0),0);
+  const wAbsent=students.reduce((a,s)=>a+(weekData[s.user]?.absent||0),0);
+
+  const mPresent=students.reduce((a,s)=>a+(monthData[s.user]?.present||0),0);
+  const mAbsent=students.reduce((a,s)=>a+(monthData[s.user]?.absent||0),0);
+
+  const pct=(p,t)=>t>0?Math.round(p/t*100):0;
+
+  const studentRows=students.map(s=>{
+    const td=todayData[s.user];
+    const wd=weekData[s.user]||{present:0,absent:0};
+    const md=monthData[s.user]||{present:0,absent:0};
+    const wTotal=wd.present+wd.absent;
+    const mTotal=md.present+md.absent;
+    return `<div class="student-item">
+      <div class="student-row">
+        <div class="student-info">
+          <div class="student-name">${s.name}</div>
+          <div class="student-meta"><span class="bus-badge ${BUS_CLASS[s.bus]}">${BUS_EMOJI[s.bus]} ${BUS_NAMES[s.bus]}</span></div>
+        </div>
+        <span class="status-badge ${td==='present'?'badge-on':td==='absent'?'badge-off':''}" style="${!td?'background:#f5f5f5;color:#999':''}">
+          ${td==='present'?'\u2705 \u062d\u0627\u0636\u0631\u0629':td==='absent'?'\ud83d\udeab \u063a\u0627\u0626\u0628\u0629':'\u23f3 \u0644\u0645 \u064a\u064f\u0633\u062c\u064e\u0651\u0644'}
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+        <div style="background:var(--bg);border-radius:10px;padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">\ud83d\udcc5 \u0627\u0644\u0623\u0633\u0628\u0648\u0639</div>
+          <div style="font-size:12px;font-weight:700;color:var(--green)">\u2705 ${wd.present}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--red)">\ud83d\udeab ${wd.absent}</div>
+          <div style="font-size:10px;color:var(--muted)">${pct(wd.present,wTotal)}% \u062d\u0636\u0648\u0631</div>
+        </div>
+        <div style="background:var(--bg);border-radius:10px;padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">\ud83d\udcc6 \u0627\u0644\u0634\u0647\u0631</div>
+          <div style="font-size:12px;font-weight:700;color:var(--green)">\u2705 ${md.present}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--red)">\ud83d\udeab ${md.absent}</div>
+          <div style="font-size:10px;color:var(--muted)">${pct(md.present,mTotal)}% \u062d\u0636\u0648\u0631</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML=`
+    <button class="dash-back-btn" id="bk-stats">\u2192 \u0631\u062c\u0648\u0639</button>
+    <div class="dash-section">
+      <div class="dash-section-title">\ud83d\udcca \u0625\u062d\u0635\u0627\u0626\u064a\u0627\u062a \u0627\u0644\u062d\u0636\u0648\u0631 \u0648\u0627\u0644\u063a\u064a\u0627\u0628</div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">\u2600\ufe0f \u0627\u0644\u064a\u0648\u0645</div>
+      <div class="stat-row" style="margin-bottom:12px">
+        <div class="stat-box g"><div class="stat-num">${tPresent}</div><div class="stat-lbl">\u062d\u0627\u0636\u0631\u0627\u062a</div></div>
+        <div class="stat-box r"><div class="stat-num">${tAbsent}</div><div class="stat-lbl">\u063a\u0627\u0626\u0628\u0627\u062a</div></div>
+        <div class="stat-box a"><div class="stat-num">${tUnknown}</div><div class="stat-lbl">\u0644\u0645 \u064a\u064f\u0633\u062c\u064e\u0651\u0644</div></div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">\ud83d\udcc5 \u0627\u0644\u0623\u0633\u0628\u0648\u0639 (7 \u0623\u064a\u0627\u0645)</div>
+      <div class="stat-row" style="margin-bottom:12px">
+        <div class="stat-box g"><div class="stat-num">${wPresent}</div><div class="stat-lbl">\u062d\u0636\u0648\u0631</div></div>
+        <div class="stat-box r"><div class="stat-num">${wAbsent}</div><div class="stat-lbl">\u063a\u064a\u0627\u0628</div></div>
+        <div class="stat-box a"><div class="stat-num">${pct(wPresent,wPresent+wAbsent)}%</div><div class="stat-lbl">\u0646\u0633\u0628\u0629 \u0627\u0644\u062d\u0636\u0648\u0631</div></div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:1px">\ud83d\udcc6 \u0627\u0644\u0634\u0647\u0631 (30 \u064a\u0648\u0645)</div>
+      <div class="stat-row" style="margin-bottom:14px">
+        <div class="stat-box g"><div class="stat-num">${mPresent}</div><div class="stat-lbl">\u062d\u0636\u0648\u0631</div></div>
+        <div class="stat-box r"><div class="stat-num">${mAbsent}</div><div class="stat-lbl">\u063a\u064a\u0627\u0628</div></div>
+        <div class="stat-box a"><div class="stat-num">${pct(mPresent,mPresent+mAbsent)}%</div><div class="stat-lbl">\u0646\u0633\u0628\u0629 \u0627\u0644\u062d\u0636\u0648\u0631</div></div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:1px">\ud83d\udc69\u200d\ud83c\udf93 \u062a\u0641\u0627\u0635\u064a\u0644 \u0643\u0644 \u0637\u0627\u0644\u0628\u0629</div>
+      <div class="dash-card">
+        ${students.length===0?'<div style="text-align:center;color:var(--muted);padding:20px">\u0644\u0627 \u062a\u0648\u062c\u062f \u0637\u0627\u0644\u0628\u0627\u062a</div>':studentRows}
+      </div>
+    </div>`;
+  document.getElementById('bk-stats').addEventListener('click',()=>renderSupervisorMain(document.getElementById('dash-body')));
 }
 
 async function renderAttendanceReport() {
@@ -821,6 +929,16 @@ async function renderStudentMain(body) {
       </div>
     </div>
 
+    <div class="dash-section" id="my-att-stats">
+      <div class="dash-section-title">إحصائياتي</div>
+      <div class="stat-row" style="margin-bottom:6px">
+        <div class="stat-box" style="border:1px solid var(--border)"><div class="stat-num" id="my-today" style="font-size:18px">\u23f3</div><div class="stat-lbl">اليوم</div></div>
+        <div class="stat-box" style="border:1px solid var(--border)"><div class="stat-num" id="my-week" style="font-size:18px">...</div><div class="stat-lbl">7 أيام</div></div>
+        <div class="stat-box" style="border:1px solid var(--border)"><div class="stat-num" id="my-month" style="font-size:18px">...</div><div class="stat-lbl">30 يوم</div></div>
+      </div>
+      <div class="dash-card" id="my-att-detail" style="font-size:13px;color:var(--muted);text-align:center">جاري التحميل...</div>
+    </div>
+
     <div class="dash-section">
       <div class="dash-section-title">إجراءاتي</div>
       <div class="quick-grid">
@@ -840,11 +958,40 @@ async function renderStudentMain(body) {
   document.getElementById('std-present').addEventListener('click',async()=>{
     await setAttendanceDB('bus'+currentUser.bus,currentUser.user,'present');
     showToast('✅ تم تسجيل حضورك!');
+    loadMyStats();
   });
   document.getElementById('std-absent').addEventListener('click',async()=>{
     await setAttendanceDB('bus'+currentUser.bus,currentUser.user,'absent');
     showToast('🚫 تم إبلاغ السائق بغيابك');
+    loadMyStats();
   });
+  // Load personal attendance stats
+  async function loadMyStats() {
+    const bk='bus'+currentUser.bus;
+    const [td, wd, md] = await Promise.all([
+      getAttendance(bk),
+      getAttendanceRange(bk,7),
+      getAttendanceRange(bk,30)
+    ]);
+    const u=currentUser.user;
+    const todaySt=td[u];
+    const wStats=wd[u]||{present:0,absent:0};
+    const mStats=md[u]||{present:0,absent:0};
+    const pct=(p,t)=>t>0?Math.round(p/t*100):0;
+    const todayEl=document.getElementById('my-today');
+    const weekEl=document.getElementById('my-week');
+    const monthEl=document.getElementById('my-month');
+    const detailEl=document.getElementById('my-att-detail');
+    if(todayEl) todayEl.innerHTML=todaySt==='present'?'<span style="color:var(--green)">\u2705</span>':todaySt==='absent'?'<span style="color:var(--red)">🚫</span>':'<span style="color:var(--muted)">\u23f3</span>';
+    if(weekEl) weekEl.innerHTML='<span style="color:var(--green);font-size:14px">\u2705'+wStats.present+'</span> <span style="color:var(--red);font-size:14px">🚫'+wStats.absent+'</span>';
+    if(monthEl) monthEl.innerHTML='<span style="color:var(--green);font-size:14px">\u2705'+mStats.present+'</span> <span style="color:var(--red);font-size:14px">🚫'+mStats.absent+'</span>';
+    if(detailEl) detailEl.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:11px;color:var(--muted)">نسبة حضوري (7 أيام)</div><div style="font-size:22px;font-weight:900;color:${pct(wStats.present,wStats.present+wStats.absent)>=80?'var(--green)':'var(--red)'}">${pct(wStats.present,wStats.present+wStats.absent)}%</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">نسبة حضوري (30 يوم)</div><div style="font-size:22px;font-weight:900;color:${pct(mStats.present,mStats.present+mStats.absent)>=80?'var(--green)':'var(--red)'}">${pct(mStats.present,mStats.present+mStats.absent)}%</div></div>
+      </div>`;
+  }
+  loadMyStats();
   document.getElementById('send-my-loc').addEventListener('click',()=>{
     if(!navigator.geolocation){showToast('⚠️ GPS غير متاح');return;}
     navigator.geolocation.getCurrentPosition(async pos=>{
